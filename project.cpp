@@ -1,6 +1,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <cmath>
 
 using namespace std;
 
@@ -16,16 +17,16 @@ struct BGRColor
 
 struct BM_Header
 {
-    unsigned int bfType;
+    unsigned short bfType;
     unsigned int bfSize;
-    unsigned int bfRes1;
-    unsigned int bfRes2;
+    unsigned short bfRes1;
+    unsigned short bfRes2;
     unsigned int bfOffBits;
     unsigned int biSize;
     unsigned int biWidth;
     unsigned int biHeight;
-    unsigned int biPlanes;
-    unsigned int biBitCount;
+    unsigned short biPlanes;
+    unsigned short biBitCount;
     unsigned int biCompression;
     unsigned int biSizeImage;
     unsigned int biXpelsPerMeter;
@@ -42,7 +43,6 @@ void BM_Data (struct BM_Header &Header,unsigned char File_Header[Header_Size], u
     Header.bfRes1 = File_Header[6] + (File_Header[7] << 8);                                                           //Pole zarezerwowane
     Header.bfRes2 = File_Header[8] + (File_Header[9] << 8);                                                           //Pole zarezerwowane
     Header.bfOffBits = File_Header[10] + (File_Header[11] << 8) + (File_Header[12] << 16) + (File_Header[13] << 24);  //Pozycja danych obrazowych w pliku
-
 
     //--------------DANE DLA INFO_HEADER-------------------------
     Header.biSize = Info_Header[0] + (Info_Header[1] << 8) + (Info_Header[2] << 16) + (Info_Header[3] << 24);                 //Rozmiar nagłówka
@@ -180,8 +180,54 @@ int main(){
     plik.close();
     //---------------------------------------------------------
 
+    //-----------------algorytm sobela----------------------
+    int Gx[3][3] = {{-1, 0 , 1}, {-2, 0 , 2}, {-1, 0 , 1}};
+    int Gy[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}};
+
+    int pixel_x, pixel_y;
+    vector<BGRColor> bi_Color2;
+    bi_Color2.resize(Header.biHeight * Header.biWidth);
+
+     for (int x=1; x < Header.biWidth-1; x++)
+    {
+        for (int y=1; y < Header.biHeight-1; y++)
+        {
+            pixel_x = (Gx[0][0] * bi_Color[Header.biWidth * (y-1) + (x-1)].R)
+                    + (Gx[0][1] * bi_Color[Header.biWidth *(y-1) + x ].R)
+                    + (Gx[0][2] * bi_Color[Header.biWidth *(y-1) + (x+1)].R)
+                    + (Gx[1][0] * bi_Color[Header.biWidth * y + (x-1)].R)
+                    + (Gx[1][1] * bi_Color[Header.biWidth * y + x ].R)
+                    + (Gx[1][2] * bi_Color[Header.biWidth * y + (x+1)].R)
+                    + (Gx[2][0] * bi_Color[Header.biWidth *(y+1) + (x-1)].R)
+                    + (Gx[2][1] * bi_Color[Header.biWidth *(y+1) + x ].R)
+                    + (Gx[2][2] * bi_Color[Header.biWidth *(y+1) + (x+1)].R);
+
+            pixel_y = (Gy[0][0] * bi_Color[Header.biWidth *(y-1) + (x-1)].R)
+                    + (Gy[0][1] * bi_Color[Header.biWidth *(y-1) + x ].R)
+                    + (Gy[0][2] * bi_Color[Header.biWidth *(y-1) + (x+1)].R)
+                    + (Gy[1][0] * bi_Color[Header.biWidth * y + (x-1)].R)
+                    + (Gy[1][1] * bi_Color[Header.biWidth * y + x ].R)
+                    + (Gy[1][2] * bi_Color[Header.biWidth * y + (x+1)].R)
+                    + (Gy[2][0] * bi_Color[Header.biWidth *(y+1) + (x-1)].R)
+                    + (Gy[2][1] * bi_Color[Header.biWidth *(y+1) + x ].R)
+                    + (Gy[2][2] * bi_Color[Header.biWidth *(y+1) + (x+1)].R);
+
+            int val = (int)sqrt((pixel_x * pixel_x) + (pixel_y * pixel_y));
+
+            if(val < 0) val = 0;
+            if(val > 255) val = 255;
+
+            bi_Color2[Header.biWidth * y + x].R = val;
+            bi_Color2[Header.biWidth * y + x].G = val;
+            bi_Color2[Header.biWidth * y + x].B = val;
+        }
+    }
+
+
+
+
     //zapisywanie do pliku
-    BM_Write(Header,bi_Color,File_Header, Info_Header);
+    BM_Write(Header,bi_Color2,File_Header, Info_Header);
 
 
     return 0;
