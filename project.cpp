@@ -102,11 +102,6 @@ void BM_Write(struct BM_Header &Header,vector<BGRColor> &bi_Color,unsigned char 
     {
         for(int x = 0; x < Header.biWidth; x++)
         { 
-            /*   
-            plik.write(reinterpret_cast<char*>(bi_Color[x].B , 1), 1);
-            plik.write(reinterpret_cast<char*>(bi_Color[x].G , 1), 1);
-            plik.write(reinterpret_cast<char*>(bi_Color[x].R , 1), 1);
-            */
             
             unsigned char r = static_cast<unsigned char>(bi_Color[y * Header.biWidth + x].R );
             unsigned char g = static_cast<unsigned char>(bi_Color[y * Header.biWidth + x].G );
@@ -146,6 +141,7 @@ int main(){
     unsigned char File_Header[Header_Size];
     plik.read(reinterpret_cast<char*>(File_Header), Header_Size);
 
+    //sprawdzenie czy plik jest Bitmapa
     if(File_Header[0] != 'B' || File_Header[1] != 'M')
     {
         cout << "To nie jest plik .bmp" << endl;
@@ -159,7 +155,7 @@ int main(){
     BM_Header Header;
     BM_Data(Header,File_Header, Info_Header); //dane z naglowka
 
-    //-----przypisanie pikseli rgb do struktury-----------
+    //--------------przypisanie pikseli rgb -------------------
     vector<BGRColor> bi_Color;
     bi_Color.resize(Header.biHeight * Header.biWidth);
     const int Padding = ((4 - (Header.biWidth* 3) % 4 ) % 4);
@@ -181,49 +177,99 @@ int main(){
     //---------------------------------------------------------
 
     //-----------------algorytm sobela----------------------
-    int Gx[3][3] = {{-1, 0 , 1}, {-2, 0 , 2}, {-1, 0 , 1}};
-    int Gy[3][3] = {{-1, -2, -1}, {0, 0, 0}, {1, 2, 1}};
+    int Gx[3][3] = {{-1, 0 , 1},            //macierze przez ktore bedziemy mnozyc
+                    {-2, 0 , 2}, 
+                    {-1, 0 , 1} };
+    int Gy[3][3] = {{-1, -2, -1}, 
+                    { 0, 0 , 0}, 
+                    { 1, 2 , 1} };
 
     int pixel_x, pixel_y;
     vector<BGRColor> bi_Color2;
     bi_Color2.resize(Header.biHeight * Header.biWidth);
+    int pixel_xr, pixel_xg, pixel_xb, pixel_yr, pixel_yg, pixel_yb;     //potrzebne zmienne do obliczenia dla rgb
 
      for (int x=1; x < Header.biWidth-1; x++)
     {
         for (int y=1; y < Header.biHeight-1; y++)
         {
-            pixel_x = (Gx[0][0] * bi_Color[Header.biWidth * (y-1) + (x-1)].R)
-                    + (Gx[0][1] * bi_Color[Header.biWidth *(y-1) + x ].R)
-                    + (Gx[0][2] * bi_Color[Header.biWidth *(y-1) + (x+1)].R)
+            pixel_xr = (Gx[0][0] * bi_Color[Header.biWidth * (y-1) + (x-1)].R)
+                    + (Gx[0][1] * bi_Color[Header.biWidth * (y-1) + x ].R)
+                    + (Gx[0][2] * bi_Color[Header.biWidth * (y-1) + (x+1)].R)
                     + (Gx[1][0] * bi_Color[Header.biWidth * y + (x-1)].R)
                     + (Gx[1][1] * bi_Color[Header.biWidth * y + x ].R)
                     + (Gx[1][2] * bi_Color[Header.biWidth * y + (x+1)].R)
-                    + (Gx[2][0] * bi_Color[Header.biWidth *(y+1) + (x-1)].R)
-                    + (Gx[2][1] * bi_Color[Header.biWidth *(y+1) + x ].R)
-                    + (Gx[2][2] * bi_Color[Header.biWidth *(y+1) + (x+1)].R);
+                    + (Gx[2][0] * bi_Color[Header.biWidth * (y+1) + (x-1)].R)
+                    + (Gx[2][1] * bi_Color[Header.biWidth * (y+1) + x ].R)
+                    + (Gx[2][2] * bi_Color[Header.biWidth * (y+1) + (x+1)].R);
 
-            pixel_y = (Gy[0][0] * bi_Color[Header.biWidth *(y-1) + (x-1)].R)
-                    + (Gy[0][1] * bi_Color[Header.biWidth *(y-1) + x ].R)
-                    + (Gy[0][2] * bi_Color[Header.biWidth *(y-1) + (x+1)].R)
+            pixel_yr = (Gy[0][0] * bi_Color[Header.biWidth * (y-1) + (x-1)].R)
+                    + (Gy[0][1] * bi_Color[Header.biWidth * (y-1) + x ].R)
+                    + (Gy[0][2] * bi_Color[Header.biWidth * (y-1) + (x+1)].R)
                     + (Gy[1][0] * bi_Color[Header.biWidth * y + (x-1)].R)
                     + (Gy[1][1] * bi_Color[Header.biWidth * y + x ].R)
                     + (Gy[1][2] * bi_Color[Header.biWidth * y + (x+1)].R)
-                    + (Gy[2][0] * bi_Color[Header.biWidth *(y+1) + (x-1)].R)
-                    + (Gy[2][1] * bi_Color[Header.biWidth *(y+1) + x ].R)
-                    + (Gy[2][2] * bi_Color[Header.biWidth *(y+1) + (x+1)].R);
+                    + (Gy[2][0] * bi_Color[Header.biWidth * (y+1) + (x-1)].R)
+                    + (Gy[2][1] * bi_Color[Header.biWidth * (y+1) + x ].R)
+                    + (Gy[2][2] * bi_Color[Header.biWidth * (y+1) + (x+1)].R);
 
-            int val = (int)sqrt((pixel_x * pixel_x) + (pixel_y * pixel_y));
+            pixel_xg = (Gx[0][0] * bi_Color[Header.biWidth * (y-1) + (x-1)].G)
+                    + (Gx[0][1] * bi_Color[Header.biWidth * (y-1) + x ].G)
+                    + (Gx[0][2] * bi_Color[Header.biWidth * (y-1) + (x+1)].G)
+                    + (Gx[1][0] * bi_Color[Header.biWidth * y + (x-1)].G)
+                    + (Gx[1][1] * bi_Color[Header.biWidth * y + x ].G)
+                    + (Gx[1][2] * bi_Color[Header.biWidth * y + (x+1)].G)
+                    + (Gx[2][0] * bi_Color[Header.biWidth * (y+1) + (x-1)].G)
+                    + (Gx[2][1] * bi_Color[Header.biWidth * (y+1) + x ].G)
+                    + (Gx[2][2] * bi_Color[Header.biWidth * (y+1) + (x+1)].G);
 
-            if(val < 0) val = 0;
-            if(val > 255) val = 255;
+            pixel_yg = (Gy[0][0] * bi_Color[Header.biWidth * (y-1) + (x-1)].G)
+                    + (Gy[0][1] * bi_Color[Header.biWidth * (y-1) + x ].G)
+                    + (Gy[0][2] * bi_Color[Header.biWidth * (y-1) + (x+1)].G)
+                    + (Gy[1][0] * bi_Color[Header.biWidth * y + (x-1)].G)
+                    + (Gy[1][1] * bi_Color[Header.biWidth * y + x ].G)
+                    + (Gy[1][2] * bi_Color[Header.biWidth * y + (x+1)].G)
+                    + (Gy[2][0] * bi_Color[Header.biWidth * (y+1) + (x-1)].G)
+                    + (Gy[2][1] * bi_Color[Header.biWidth * (y+1) + x ].G)
+                    + (Gy[2][2] * bi_Color[Header.biWidth * (y+1) + (x+1)].G);
 
-            bi_Color2[Header.biWidth * y + x].R = val;
-            bi_Color2[Header.biWidth * y + x].G = val;
-            bi_Color2[Header.biWidth * y + x].B = val;
+            pixel_xb = (Gx[0][0] * bi_Color[Header.biWidth * (y-1) + (x-1)].B)
+                    + (Gx[0][1] * bi_Color[Header.biWidth * (y-1) + x ].B)
+                    + (Gx[0][2] * bi_Color[Header.biWidth * (y-1) + (x+1)].B)
+                    + (Gx[1][0] * bi_Color[Header.biWidth * y + (x-1)].B)
+                    + (Gx[1][1] * bi_Color[Header.biWidth * y + x ].B)
+                    + (Gx[1][2] * bi_Color[Header.biWidth * y + (x+1)].B)
+                    + (Gx[2][0] * bi_Color[Header.biWidth * (y+1) + (x-1)].B)
+                    + (Gx[2][1] * bi_Color[Header.biWidth * (y+1) + x ].B)
+                    + (Gx[2][2] * bi_Color[Header.biWidth * (y+1) + (x+1)].B);
+
+            pixel_yb = (Gy[0][0] * bi_Color[Header.biWidth * (y-1) + (x-1)].B)
+                    + (Gy[0][1] * bi_Color[Header.biWidth * (y-1) + x ].B)
+                    + (Gy[0][2] * bi_Color[Header.biWidth * (y-1) + (x+1)].B)
+                    + (Gy[1][0] * bi_Color[Header.biWidth * y + (x-1)].B)
+                    + (Gy[1][1] * bi_Color[Header.biWidth * y + x ].B)
+                    + (Gy[1][2] * bi_Color[Header.biWidth * y + (x+1)].B)
+                    + (Gy[2][0] * bi_Color[Header.biWidth * (y+1) + (x-1)].B)
+                    + (Gy[2][1] * bi_Color[Header.biWidth * (y+1) + x ].B)
+                    + (Gy[2][2] * bi_Color[Header.biWidth * (y+1) + (x+1)].B);
+
+            int valr = (int)sqrt((pixel_xr * pixel_xr) + (pixel_yr * pixel_yr));
+            int valg = (int)sqrt((pixel_xg * pixel_xg) + (pixel_yr * pixel_yg));
+            int valb = (int)sqrt((pixel_xb * pixel_xb) + (pixel_yb * pixel_yb));
+
+            //wartosci nie moge wykraczac poza <0;255>
+            if(valr < 0) valr = 0;
+            if(valr > 255) valr = 255;
+            if(valg < 0) valg = 0;
+            if(valg > 255) valg = 255;
+            if(valb < 0) valb = 0;
+            if(valb > 255) valb = 255;
+
+            bi_Color2[Header.biWidth * y + x].R = valr;
+            bi_Color2[Header.biWidth * y + x].G = valg;
+            bi_Color2[Header.biWidth * y + x].B = valb;
         }
     }
-
-
 
 
     //zapisywanie do pliku
